@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Boutique AI Assistant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --primary:#d63384;
+  --light:#fff0f6;
+}
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family:Segoe UI,sans-serif;
+  background:linear-gradient(135deg,#ffe6f0,#fff);
+}
+.chat{
+  width:400px;
+  max-width:95%;
+  height:650px;
+  background:rgba(255,255,255,.9);
+  backdrop-filter:blur(14px);
+  border-radius:20px;
+  box-shadow:0 20px 40px rgba(0,0,0,.15);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.header{
+  background:var(--primary);
+  color:#fff;
+  padding:15px;
+  text-align:center;
+  font-weight:bold;
+}
+.cart{
+  font-size:12px;
+}
+.messages{
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.msg{
+  max-width:85%;
+  padding:12px 14px;
+  border-radius:15px;
+  animation:fade .3s;
+}
+.bot{background:#fff;border:1px solid #eee;align-self:flex-start;}
+.user{background:var(--primary);color:#fff;align-self:flex-end;}
+.product{
+  border:2px solid #eee;
+  border-radius:12px;
+  padding:10px;
+  cursor:pointer;
+  margin-top:6px;
+}
+.product:hover{border-color:var(--primary);background:var(--light);}
+.btn{
+  padding:6px 12px;
+  border-radius:20px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  font-size:12px;
+  margin:5px 5px 0 0;
+  cursor:pointer;
+}
+.input{
+  display:flex;
+  padding:12px;
+  border-top:1px solid #eee;
+}
+input{
+  flex:1;
+  padding:10px;
+  border-radius:20px;
+  border:1px solid #ccc;
+}
+.send{
+  margin-left:8px;
+  border:none;
+  border-radius:20px;
+  background:var(--primary);
+  color:#fff;
+  padding:8px 15px;
+}
+.typing{
+  font-size:12px;
+  opacity:.6;
+}
+@keyframes fade{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1}
+}
+</style>
+</head>
+<body>
+
+<div class="chat">
+  <div class="header">
+    🌸 Smart Boutique AI<br>
+    <span class="cart">🛒 Cart: <span id="cartCount">0</span></span>
+  </div>
+  <div class="messages" id="chat"></div>
+  <div class="input">
+    <input id="input" placeholder="Type here..." />
+    <button class="send" onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+const chat=document.getElementById("chat");
+const input=document.getElementById("input");
+const cartCount=document.getElementById("cartCount");
+
+let username = "";
+let cart=[];
+let selectedProduct=null;
+let selectedSize=null;
+let waitingOrder=false;
+let loginStage=true;
+
+const inventory=[
+ {id:1,name:"Velvet Anarkali",price:"₹4,200",sizes:["S","M","L"],colors:["Maroon","Black"]},
+ {id:2,name:"Silk Party Gown",price:"₹5,500",sizes:["M","L"],colors:["Gold","Pink"]},
+ {id:3,name:"Floral Summer Dress",price:"₹2,800",sizes:["S","M","L"],colors:["Yellow","White"]}
+];
+
+function add(text,type){
+  const d=document.createElement("div");
+  d.className=`msg ${type}`;
+  d.innerHTML=text;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function typing(){
+  const t=document.createElement("div");
+  t.className="msg bot typing";
+  t.innerText="Typing...";
+  chat.appendChild(t);
+  chat.scrollTop=chat.scrollHeight;
+  return t;
+}
+
+function showCatalog(){
+  let html="<b>Our Exclusive Collection:</b>";
+  inventory.forEach(p=>{
+    html+=`<div class="product" onclick="selectProduct(${p.id})">
+      👗 <b>${p.name}</b><br>💰 ${p.price}
+    </div>`;
+  });
+  add(html,"bot");
+}
+
+function selectProduct(id){
+  selectedProduct=inventory.find(p=>p.id===id);
+  selectedSize=null;
+  add(`I want ${selectedProduct.name}`,"user");
+  setTimeout(()=>{ 
+    add(`<b>${selectedProduct.name}</b><br>Price: ${selectedProduct.price}<br><b>Select Size:</b><br>
+      ${selectedProduct.sizes.map(s=>`<button class="btn" onclick="selectSize('${s}')">${s}</button>`).join("")}
+    `,"bot");
+  },300);
+}
+
+function selectSize(size){
+  selectedSize=size;
+  add(size,"user");
+  setTimeout(()=>{ 
+    add(`<b>Select Color:</b><br>
+      ${selectedProduct.colors.map(c=>`<button class="btn" onclick="addCart('${c}')">${c}</button>`).join("")}
+    `,"bot");
+  },300);
+}
+
+function addCart(color){
+  add(color,"user");
+  cart.push({name:selectedProduct.name,size:selectedSize,color});
+  cartCount.textContent=cart.length;
+  setTimeout(()=>{
+    add(`✅ <b>Added to Cart</b><br>
+      👗 ${selectedProduct.name}<br>📏 ${selectedSize} | 🎨 ${color}<br>
+      <button class="btn" onclick="showCatalog()">Continue Shopping</button>
+      <button class="btn" onclick="track()">Track Order</button>
+      <button class="btn" onclick="checkout()">Checkout</button>
+    `,"bot");
+  },300);
+}
+
+function track(){
+  waitingOrder=true;
+  add("Please enter your Order ID 📦","bot");
+}
+
+function checkout(){
+  if(cart.length===0){ add("Your cart is empty 💔","bot"); return; }
+  let summary = "<b>Checkout Summary:</b><br>";
+  cart.forEach((p,i)=> summary += `${i+1}. ${p.name} - ${p.size} - ${p.color}<br>`);
+  add(summary + `<br><button class="btn" onclick="confirmCheckout()">Confirm Payment</button>`,"bot");
+}
+
+function confirmCheckout(){
+  add(`💳 Payment Successful! Thank you ${username || ""} 🥰<br>Your order will arrive in 3-5 days.`,"bot");
+  cart=[];
+  cartCount.textContent=0;
+}
+
+function send(){
+  const text=input.value.trim();
+  if(!text) return;
+  add(text,"user");
+  input.value="";
+  const t=text.toLowerCase();
+  const wait=typing();
+
+  setTimeout(()=>{
+    wait.remove();
+
+    if(loginStage){
+      username=text;
+      loginStage=false;
+      add(`Hey ${username}! 👋 Welcome to Smart Boutique AI.<br>Type <b>show collection</b> to browse dresses or <b>track order</b>.`,"bot");
+      return;
+    }
+
+    if(waitingOrder){
+      waitingOrder=false;
+      add(`🚚 Order <b>${text}</b> is out for delivery!`,"bot");
+    }
+    else if(t.includes("hi")||t.includes("hello")||t.includes("hey")){
+      add(`Hey ${username}! 👋 How can I help you today? 💕`,"bot");
+    }
+    else if(t.includes("show")||t.includes("collection")){
+      showCatalog();
+    }
+    else if(t.includes("track")){
+      track();
+    }
+    else if(t.includes("cart")){
+      add(`🛒 You have ${cart.length} item(s) in your cart.`,"bot");
+    }
+    else if(t.includes("checkout")){
+      checkout();
+    }
+    else{
+      add("Sorry, I only assist with boutique shopping, cart, checkout & orders 💕<br>Try: <b>show collection</b> or <b>track order</b>","bot");
+    }
+  },600);
+}
+
+window.onload=()=>{
+  add("Welcome! Please enter your name to get started.","bot");
+};
+
+input.addEventListener("keypress",e=>{
+  if(e.key==="Enter") send();
+});
+</script>
+
+</body>
+</html>
