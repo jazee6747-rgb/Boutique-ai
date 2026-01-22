@@ -1,1 +1,1 @@
-# Boutique-ai
+# Boutique-assistance
